@@ -1,5 +1,8 @@
+# frozen_string_literal: true
+
 module Github
   module Trending
+    # attributes for a trending repo
     class Project
       attr_accessor :name, :lang, :description, :star_count, :url
 

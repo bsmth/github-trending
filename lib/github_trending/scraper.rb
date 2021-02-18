@@ -1,8 +1,10 @@
-# -*- coding: utf-8 -*-
+# frozen_string_literal: true
+
 require 'mechanize'
 require 'addressable/uri'
 
 module Github
+  # scrape the trending repos page on github
   module Trending
     def self.get(language = nil, since = nil)
       scraper = Github::Trending::Scraper.new
@@ -15,11 +17,12 @@ module Github
     end
 
     class << self
-      alias_method :all_languages,  :languages
-      alias_method :get_languages,  :languages
-      alias_method :list_languages, :languages
+      alias all_languages languages
+      alias get_languages languages
+      alias list_languages languages
     end
 
+    # fetch repo URLs
     class Scraper
       BASE_HOST = 'https://github.com'
       BASE_URL = "#{BASE_HOST}/trending"
@@ -31,6 +34,7 @@ module Github
         @agent.set_proxy(proxy.host, proxy.port, proxy.user, proxy.password) if proxy
       end
 
+      # currently broken
       def get(language = nil, since = nil)
         projects = []
         page = @agent.get(generate_url_for_get(language, since))
@@ -38,13 +42,15 @@ module Github
         page.search('.repo-list-item').each do |content|
           project = Project.new
           meta_data = content.search('.repo-list-meta').text
-          project.lang, project.star_count = extract_lang_and_star_from_meta(meta_data)
-          project.name        = content.search('.repo-list-name a').text.split.join
-          project.url         = BASE_HOST + content.search('.repo-list-name a').first.attributes["href"].value
-          project.description = content.search('.repo-list-description').text.gsub("\n", '').strip
+          meta_data.inspect
+          # project.lang, project.star_count = extract_lang_and_star_from_meta(meta_data)
+          # project.name        = content.search('.repo-list-name a').text.split.join
+          # project.url         = BASE_HOST + content.search('.repo-list-name a').first.attributes['href'].value
+          # project.description = content.search('.repo-list-description').text.gsub("\n", '').strip
           projects << project
         end
-        fail ScrapeException if projects.empty?
+        raise ScrapeException if projects.empty?
+
         projects
       end
 
@@ -54,7 +60,7 @@ module Github
         page.search('div.select-menu-item a').each do |content|
           href = content.attributes['href'].value
           # objective-c++ =>
-          language = href.match(/github.com\/trending\?l=(.+)/).to_a[1]
+          language = href.match(%r{github.com/trending\?l=(.+)}).to_a[1]
           languages << CGI.unescape(language) if language
         end
         languages
@@ -64,21 +70,8 @@ module Github
 
       def generate_url_for_get(language, since)
         language = language.to_s.gsub('_', '-') if language
-
-        if since
-          since =
-            case since.to_sym
-              when :d, :day,   :daily   then 'daily'
-              when :w, :week,  :weekly  then 'weekly'
-              when :m, :month, :monthly then 'monthly'
-              else nil
-            end
-        end
-
         uri = Addressable::URI.parse(BASE_URL)
-        if language || since
-          uri.query_values = { l: language, since: since }.delete_if { |_k, v| v.nil? }
-        end
+        uri.query_values = { l: language, since: since }.delete_if { |_k, v| v.nil? } if language || since
         uri.to_s
       end
 

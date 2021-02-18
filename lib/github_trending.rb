@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Github
   module Trending
     class ScrapeException < StandardError; end
